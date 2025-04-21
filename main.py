@@ -69,4 +69,4 @@ def options_alpha():
         "instruments": instruments_data[:5],  # send partial data for readability
         "option_chain": chain[:5],
         "open_interest": oi
-    }
+        }
