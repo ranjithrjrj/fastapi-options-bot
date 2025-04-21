@@ -1,36 +1,60 @@
-import os
-import requests
 from fastapi import FastAPI
+import requests
+import os
 
-# FastAPI app setup
 app = FastAPI()
 
-# Fetch API key and secret from environment variables (replace these if necessary)
 DELTA_API_KEY = os.getenv("DELTA_API_KEY")
 DELTA_API_SECRET = os.getenv("DELTA_API_SECRET")
 
-# Delta Exchange API URL for options
-options_url = "https://api.delta.exchange/v2/options"
+HEADERS = {
+    "api-key": DELTA_API_KEY,
+    "api-secret": DELTA_API_SECRET
+}
 
-# Function to fetch options data from Delta Exchange
-def fetch_options_data():
+BASE_URL = "https://api.delta.exchange"
+
+def get_instruments():
     try:
-        # Make a GET request to Delta Exchange API to fetch options data
-        response = requests.get(options_url, headers={
-            'Authorization': f'Bearer {DELTA_API_KEY}'
-        })
-
-        # Check if the request was successful
-        if response.status_code == 200:
-            return response.json()  # Return options data as JSON
-        else:
-            return {"error": f"Failed to fetch data. Status code: {response.status_code}"}
+        response = requests.get(f"{BASE_URL}/v2/products")
+        data = response.json()
+        return data.get("result", [])
     except Exception as e:
-        # Catch any errors and return the message
-        return {"error": f"An error occurred: {str(e)}"}
+        print(f"Error fetching instruments: {e}")
+        return []
 
-# FastAPI endpoint to return options data
-@app.get("/options-data")
-async def get_options_data():
-    data = fetch_options_data()  # Fetch the data
-    return data  # Return the data (will be converted to JSON automatically)
+def get_option_chain():
+    try:
+        response = requests.get(f"{BASE_URL}/v2/options/chains")
+        return response.json().get("result", [])
+    except Exception as e:
+        print(f"Error fetching option chain: {e}")
+        return []
+
+def get_iv_rank(symbol="BTCUSD"):
+    try:
+        response = requests.get(f"{BASE_URL}/v2/underlying/index?symbol={symbol}")
+        data = response.json()
+        return data.get("result", {}).get("iv_rank")
+    except Exception as e:
+        print(f"Error fetching IV rank: {e}")
+        return None
+
+@app.get("/")
+def root():
+    return {"message": "Delta Exchange Options API - FastAPI is working."}
+
+@app.get("/options/instruments")
+def instruments():
+    instruments_data = get_instruments()
+    return {"instruments": instruments_data}
+
+@app.get("/options/chain")
+def option_chain():
+    chain = get_option_chain()
+    return {"option_chain": chain}
+
+@app.get("/options/iv_rank")
+def iv_rank(symbol: str = "BTCUSD"):
+    rank = get_iv_rank(symbol)
+    return {"symbol": symbol, "iv_rank": rank}
