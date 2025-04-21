@@ -56,3 +56,4 @@ def get_option_chain(symbol: str = "BTCUSD"):
         response = delta_authenticated_request("GET", endpoint)
         return JSONResponse(content=response)
     except Exception as e:
+    print(f"An error occurred: {e}")
