@@ -31,13 +31,13 @@ def get_option_chain():
         print(f"Error fetching option chain: {e}")
         return []
 
-def get_iv(symbol="BTCUSD"):
+def get_open_interest(symbol="BTCUSD"):
     try:
         response = requests.get(f"{BASE_URL}/v2/underlying/index?symbol={symbol}")
         data = response.json()
-        return data.get("result", {}).get("iv")
+        return data.get("result", {}).get("open_interest")
     except Exception as e:
-        print(f"Error fetching IV: {e}")
+        print(f"Error fetching OI: {e}")
         return None
 
 @app.get("/")
@@ -54,19 +54,19 @@ def option_chain():
     chain = get_option_chain()
     return {"option_chain": chain}
 
-@app.get("/options/iv")
+@app.get("/options/open_interest")
 def iv_rank(symbol: str = "BTCUSD"):
-    rank = get_iv_rank(symbol)
-    return {"symbol": symbol, "iv": iv}
+    rank = get_open_interest(symbol)
+    return {"symbol": symbol, "open_interest": iv}
 
 @app.get("/options-alpha")
 def options_alpha():
     instruments_data = get_instruments()
     chain = get_option_chain()
-    iv = get_iv()
+    oi = get_open_interest()
 
     return {
         "instruments": instruments_data[:5],  # send partial data for readability
         "option_chain": chain[:5],
-        "iv": iv
+        "open_interest": oi
     }
