@@ -58,3 +58,15 @@ def option_chain():
 def iv_rank(symbol: str = "BTCUSD"):
     rank = get_iv_rank(symbol)
     return {"symbol": symbol, "iv_rank": rank}
+
+@app.get("/options-alpha")
+def options_alpha():
+    instruments_data = get_instruments()
+    chain = get_option_chain()
+    iv_rank = get_iv_rank()
+
+    return {
+        "instruments": instruments_data[:5],  # send partial data for readability
+        "option_chain": chain[:5],
+        "iv_rank": iv_rank
+    }
