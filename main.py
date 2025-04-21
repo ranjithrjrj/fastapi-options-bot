@@ -1,63 +1,60 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
-import os
-import hmac
-import hashlib
-import time
 import requests
+import os
 
-# Load environment variables from .env
-load_dotenv()
+app = FastAPI()
 
-API_KEY = os.getenv("DELTA_API_KEY")
-API_SECRET = os.getenv("DELTA_API_SECRET")
+DELTA_API_KEY = os.getenv("DELTA_API_KEY")
+DELTA_API_SECRET = os.getenv("DELTA_API_SECRET")
+
+HEADERS = {
+    "api-key": DELTA_API_KEY,
+    "api-secret": DELTA_API_SECRET
+}
+
 BASE_URL = "https://api.delta.exchange"
 
-app = FastAPI(title="Delta Options Alpha API")
+def get_instruments():
+    try:
+        response = requests.get(f"{BASE_URL}/v2/products")
+        data = response.json()
+        return data.get("result", [])
+    except Exception as e:
+        print(f"Error fetching instruments: {e}")
+        return []
 
+def get_option_chain():
+    try:
+        response = requests.get(f"{BASE_URL}/v2/options/chains")
+        return response.json().get("result", [])
+    except Exception as e:
+        print(f"Error fetching option chain: {e}")
+        return []
 
-def generate_signature(http_method, endpoint_path, expiry, request_body=""):
-    message = f"{http_method}{endpoint_path}{expiry}{request_body}"
-    return hmac.new(
-        API_SECRET.encode(), message.encode(), hashlib.sha256
-    ).hexdigest()
-
-
-def delta_authenticated_request(http_method, endpoint_path, params=""):
-    url = BASE_URL + endpoint_path
-    expiry = str(int(time.time()) + 30)
-    signature = generate_signature(http_method, endpoint_path, expiry, params)
-
-    headers = {
-        "api-key": API_KEY,
-        "signature": signature,
-        "expiry": expiry,
-        "Content-Type": "application/json"
-    }
-
-    if http_method == "GET":
-        response = requests.get(url, headers=headers)
-    else:
-        response = requests.post(url, headers=headers, data=params)
-
-    return response.json()
-
+def get_iv_rank(symbol="BTCUSD"):
+    try:
+        response = requests.get(f"{BASE_URL}/v2/underlying/index?symbol={symbol}")
+        data = response.json()
+        return data.get("result", {}).get("iv_rank")
+    except Exception as e:
+        print(f"Error fetching IV rank: {e}")
+        return None
 
 @app.get("/")
 def root():
-    return {"status": "Delta Options Alpha API is running"}
+    return {"message": "Delta Exchange Options API - FastAPI is working."}
 
+@app.get("/options/instruments")
+def instruments():
+    instruments_data = get_instruments()
+    return {"instruments": instruments_data}
 
-@app.get("/option-chain/{symbol}")
-def get_option_chain(symbol: str = "BTCUSD"):
-    endpoint = f"/v2/options/chain?underlying={symbol}"
-    try:
-        response = delta_authenticated_request("GET", endpoint)
-        return JSONResponse(content=response)
-    except Exception as e:
+@app.get("/options/chain")
+def option_chain():
+    chain = get_option_chain()
+    return {"option_chain": chain}
 
-
-
-
-    print(f"An error occurred: {e}")
+@app.get("/options/iv_rank")
+def iv_rank(symbol: str = "BTCUSD"):
+    rank = get_iv_rank(symbol)
+    return {"symbol": symbol, "iv_rank": rank}
