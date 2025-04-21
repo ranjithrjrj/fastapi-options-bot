@@ -1,60 +1,29 @@
-from fastapi import FastAPI
-import requests
 import os
+import requests
 
-app = FastAPI()
-
+# Retrieve API key and secret from environment variables
 DELTA_API_KEY = os.getenv("DELTA_API_KEY")
 DELTA_API_SECRET = os.getenv("DELTA_API_SECRET")
 
-HEADERS = {
-    "api-key": DELTA_API_KEY,
-    "api-secret": DELTA_API_SECRET
-}
+# Delta Exchange API URL for options
+options_url = "https://api.delta.exchange/v2/options"
 
-BASE_URL = "https://api.delta.exchange"
+# Function to fetch options data
+def fetch_options_data():
+    # Make a request to the Delta Exchange API to fetch options data
+    response = requests.get(options_url, headers={
+        'Authorization': f'Bearer {DELTA_API_KEY}'
+    })
+    
+    if response.status_code == 200:
+        return response.json()  # Return options data as JSON
+    else:
+        return {"error": "Failed to fetch data", "status_code": response.status_code}
 
-def get_instruments():
-    try:
-        response = requests.get(f"{BASE_URL}/v2/products")
-        data = response.json()
-        return data.get("result", [])
-    except Exception as e:
-        print(f"Error fetching instruments: {e}")
-        return []
+# Example: Fetch options data
+options_data = fetch_options_data()
 
-def get_option_chain():
-    try:
-        response = requests.get(f"{BASE_URL}/v2/options/chains")
-        return response.json().get("result", [])
-    except Exception as e:
-        print(f"Error fetching option chain: {e}")
-        return []
-
-def get_iv_rank(symbol="BTCUSD"):
-    try:
-        response = requests.get(f"{BASE_URL}/v2/underlying/index?symbol={symbol}")
-        data = response.json()
-        return data.get("result", {}).get("iv_rank")
-    except Exception as e:
-        print(f"Error fetching IV rank: {e}")
-        return None
-
-@app.get("/")
-def root():
-    return {"message": "Delta Exchange Options API - FastAPI is working."}
-
-@app.get("/options/instruments")
-def instruments():
-    instruments_data = get_instruments()
-    return {"instruments": instruments_data}
-
-@app.get("/options/chain")
-def option_chain():
-    chain = get_option_chain()
-    return {"option_chain": chain}
-
-@app.get("/options/iv_rank")
-def iv_rank(symbol: str = "BTCUSD"):
-    rank = get_iv_rank(symbol)
-    return {"symbol": symbol, "iv_rank": rank}
+if "error" not in options_data:
+    print("Options Data:", options_data)
+else:
+    print("Error fetching options data:", options_data)
