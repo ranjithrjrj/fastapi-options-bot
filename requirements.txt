@@ -3,4 +3,3 @@ uvicorn
 requests
 gunicorn
 python-dotenv
-pip install gunicorn
