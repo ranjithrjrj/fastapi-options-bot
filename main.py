@@ -31,13 +31,13 @@ def get_option_chain():
         print(f"Error fetching option chain: {e}")
         return []
 
-def get_iv_rank(symbol="BTCUSD"):
+def get_iv(symbol="BTCUSD"):
     try:
         response = requests.get(f"{BASE_URL}/v2/underlying/index?symbol={symbol}")
         data = response.json()
-        return data.get("result", {}).get("iv_rank")
+        return data.get("result", {}).get("iv")
     except Exception as e:
-        print(f"Error fetching IV rank: {e}")
+        print(f"Error fetching IV: {e}")
         return None
 
 @app.get("/")
