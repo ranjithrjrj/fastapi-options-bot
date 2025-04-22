@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 import requests
 import os
-from datetime import datetime, timedelta
 
 app = FastAPI()
 
@@ -15,57 +14,58 @@ HEADERS = {
 
 BASE_URL = "https://api.delta.exchange"
 
-
-def get_option_chain():
+def get_btc_options():
     try:
         url = f"{BASE_URL}/v2/products"
-        response = requests.get(url, headers=HEADERS)
-        print("Status code:", response.status_code)
-        print("Response text:", response.text[:500])
-        return response.json().get("result", [])
+        response = requests.get(url)
+        products = response.json().get("result", [])
+        return [p for p in products if p["product_type"] == "options" and "BTC" in p["underlying_asset"]["symbol"]]
     except Exception as e:
-        print(f"Error fetching products: {e}")
+        print(f"Error fetching BTC options: {e}")
         return []
 
-
-def get_filtered_high_vega_options(products, option_type, top_n=10):
-    filtered = [
-        p for p in products
-        if p.get("contract_type") == "option" and
-        p.get("option_type") == option_type and
-        p.get("underlying_asset") == "BTC" and
-        p.get("vega") is not None
-    ]
-
-    sorted_options = sorted(filtered, key=lambda x: x["vega"], reverse=True)
-    top_options = sorted_options[:top_n]
-
-    return [
-        {
-            "strike_price": o.get("strike_price"),
-            "expiry": o.get("expiry"),
-            "vega": o.get("vega"),
-            "symbol": o.get("symbol")
-        }
-        for o in top_options
-    ]
-
-
-@app.get("/")
-def root():
-    return {"message": "Delta Options Alpha API is working."}
-
+def get_ticker_data(symbol):
+    try:
+        url = f"{BASE_URL}/v2/tickers/{symbol}"
+        response = requests.get(url)
+        return response.json().get("result", {})
+    except Exception as e:
+        print(f"Error fetching ticker data for {symbol}: {e}")
+        return {}
 
 @app.get("/options/high-vega")
-def get_high_vega():
-    option_chain = get_option_chain()
-    if not option_chain:
-        return {"error": "No option chain data found."}
+def high_vega_options():
+    btc_options = get_btc_options()
+    calls = []
+    puts = []
 
-    top_calls = get_filtered_high_vega_options(option_chain, "call", 10)
-    top_puts = get_filtered_high_vega_options(option_chain, "put", 10)
+    for option in btc_options:
+        symbol = option["symbol"]
+        details = get_ticker_data(symbol)
+        vega = details.get("vega")
+
+        if vega is not None:
+            entry = {
+                "symbol": symbol,
+                "strike_price": option["strike_price"],
+                "expiry": option["expiry_date"],
+                "vega": vega
+            }
+
+            if option["option_type"] == "call":
+                calls.append(entry)
+            elif option["option_type"] == "put":
+                puts.append(entry)
+
+    # Sort by Vega in descending order
+    top_calls = sorted(calls, key=lambda x: x["vega"], reverse=True)[:10]
+    top_puts = sorted(puts, key=lambda x: x["vega"], reverse=True)[:10]
 
     return {
         "top_10_high_vega_calls": top_calls,
         "top_10_high_vega_puts": top_puts
     }
+
+@app.get("/")
+def root():
+    return {"message": "FastAPI running - Delta Options Vega fetcher"}
