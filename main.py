@@ -15,13 +15,13 @@ HEADERS = {
 
 BASE_URL = "https://api.delta.exchange"
 
-def fetch_option_chain():
+def get_option_chain():
     try:
-        response = requests.get(f"{BASE_URL}/v2/options/chains")
-        data = response.json()
-        if isinstance(data, dict) and "result" in data:
-            return data["result"]
-        return []
+        url = f"{BASE_URL}/v2/options/chains"
+        response = requests.get(url, headers=HEADERS)
+        print("Status code:", response.status_code)
+        print("Response text:", response.text)
+        return response.json().get("result", [])
     except Exception as e:
         print(f"Error fetching option chain: {e}")
         return []
