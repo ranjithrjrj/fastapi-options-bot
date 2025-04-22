@@ -17,6 +17,8 @@ BASE_URL = "https://api.delta.exchange"
 def fetch_option_chain():
     try:
         response = requests.get(f"{BASE_URL}/v2/options/chains")
+        print("STATUS CODE:", response.status_code)
+        print("RAW RESPONSE:", response.text)
         data = response.json()
         return data.get("result", [])
     except Exception as e:
