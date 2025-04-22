@@ -18,25 +18,26 @@ BASE_URL = "https://api.delta.exchange"
 
 def get_option_chain():
     try:
-        url = f"{BASE_URL}/v2/options/chains"
+        url = f"{BASE_URL}/v2/products"
         response = requests.get(url, headers=HEADERS)
         print("Status code:", response.status_code)
-        print("Response text:", response.text[:500])  # Trim for log safety
+        print("Response text:", response.text[:500])
         return response.json().get("result", [])
     except Exception as e:
-        print(f"Error fetching option chain: {e}")
+        print(f"Error fetching products: {e}")
         return []
 
 
-def get_filtered_high_vega_options(option_chain, option_type, top_n=10):
-    filtered_options = [
-        o for o in option_chain
-        if o.get("option_type") == option_type and
-        o.get("vega") is not None and
-        o.get("underlying_asset") == "BTC"
+def get_filtered_high_vega_options(products, option_type, top_n=10):
+    filtered = [
+        p for p in products
+        if p.get("contract_type") == "option" and
+        p.get("option_type") == option_type and
+        p.get("underlying_asset") == "BTC" and
+        p.get("vega") is not None
     ]
 
-    sorted_options = sorted(filtered_options, key=lambda x: x["vega"], reverse=True)
+    sorted_options = sorted(filtered, key=lambda x: x["vega"], reverse=True)
     top_options = sorted_options[:top_n]
 
     return [
